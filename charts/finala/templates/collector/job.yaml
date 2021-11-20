@@ -1,0 +1,45 @@
+{{- $root := . -}}
+{{range $name, $collector := .Values.collector }}
+{{- if and ( $collector.create) ( $collector.run_at_deployment)  }}
+{{ $resourceName := printf "%s-%s-collector-at-deployment" (include "finala.fullname" $root) $name }}
+{{ $configMapName := printf "%s-%s-configmap-collector" (include "finala.fullname" $root) $name }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $resourceName }}
+  labels:
+{{ include "finala.labels" $root | indent 4 }}
+    component: {{ include "finala.fullname" $root }}-at-deployment
+spec:
+  template:
+    metadata:
+      labels:
+{{ include "finala.labels" $root | indent 8 }}
+        component: {{ include "finala.fullname" $root }}-at-deployment
+      annotations:
+{{- if  $collector.annotations }}
+{{ toYaml  $collector.annotations | indent 8}}
+{{- end }}
+{{ include "finala.annotations" $root | indent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: {{ $resourceName }}
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+          args: ["collector"]
+          volumeMounts:
+            - name: {{ $configMapName }}
+              mountPath: /etc/finala
+          env:
+            {{- include "finala.environmentVars" $collector | nindent 12 }}   
+      volumes:
+        - name: {{ $configMapName }}
+          configMap:
+            name: {{ $configMapName }}
+            items:
+              - key: config
+                path: config.yaml
+      
+{{- end }}
+{{- end }}

@@ -1,0 +1,121 @@
+# Default values for finala.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  repository: similarweb/finala
+  tag: v0.4.0
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+storage:
+  type: internal
+
+api:
+  create: true
+  replicas: 1
+  annotations: {}
+  application:
+    log_level: INFO
+    storage:
+      elasticsearch:
+        active: true
+        index: general
+        username: ""
+        password: ""
+        endpoint: ""
+
+  service:
+    type: ClusterIP
+    annotations: {}
+    externalPort: 80
+
+  ingress:
+    create: false
+    host: http://127.0.0.1:8081
+    annotations: {}
+  
+  resources:
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+ui:
+  create: true
+  replicas: 1
+  annotations: {}
+  application:
+    log_level: INFO
+
+  service:
+    type: ClusterIP
+    annotations: {}
+    externalPort: 80
+  
+  ingress:
+    create: false
+    host: "https://finala.ui.com"
+    annotations: {}
+
+  resources:
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+notifier:
+  create: true
+  schedule: "0 8 * * 1" # Run once a week on Monday at 08:00
+  annotations: {}
+  environmentVars: 
+    # key: value
+  resources:
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  application:
+    log_level: INFO
+    notifiers:
+      # slack:
+      #   token: slack_token
+      #   default_channels:
+      #     - '#default-channel'
+      #   notify_by_tags:
+      #     <notification_group>:
+      #       minimum_cost_to_present: <minimum price which notifier will notify about>
+      #       tags:
+      #         - name: name
+      #           value: value
+      #       notify_to:
+      #           - slack username
+      #           - '#slack-channelname'
+
+collector:
+  general: 
+    create: true
+    schedule: "0 8 * * *" # Run every day at 08:00
+    annotations: 
+      # iam.amazonaws.com/role: arn:aws:iam::ACCOUNT-ID:role/finala-production
+    run_at_deployment: true
+    environmentVars: 
+      # AWS_ACCESS_KEY_ID: value
+      # AWS_SECRET_ACCESS_KEY: value
+    resources:
+      # requests:
+      #   cpu: 100m
+      #   memory: 128Mi
+    application:
+      log_level: INFO
+      api_server: 
+        bulk_interval: 5s
+      providers:
+        aws:
+          accounts: 
+            - name: main
+              regions:
+                - us-east-1
+                - us-west-2
+          # metrics:
+            # By default the metrics will be loaded from aws-metrics.yaml file. 
+            # You can uncomment the metrics section and add your specific metrics that will be collected. 

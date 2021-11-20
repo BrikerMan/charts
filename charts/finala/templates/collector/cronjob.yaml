@@ -1,0 +1,52 @@
+{{- $root := . -}}
+{{range $name, $collector := .Values.collector }}
+{{- if $collector.create  }}
+{{ $resourceName := printf "%s-%s-collector" (include "finala.fullname" $root) $name }}
+{{ $configMapName := printf "%s-%s-configmap-collector" (include "finala.fullname" $root) $name }}
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ $resourceName }}
+  labels:
+{{ include "finala.labels" $root | indent 4 }}
+    component: {{ $resourceName }}
+spec:
+  concurrencyPolicy: "Forbid"
+  schedule: "{{ $collector.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+{{ include "finala.labels" $root | indent 12 }}
+            component: {{ $resourceName }}
+          annotations:
+{{- if $collector.annotations }}
+{{ toYaml $collector.annotations | indent 12}}
+{{- end }}
+{{ include "finala.annotations" $root | indent 12 }}
+        spec:
+          restartPolicy: "OnFailure"
+          containers:
+            - name: {{ $resourceName }}
+              image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag }}"
+              imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+              resources:
+                {{- toYaml $collector.resources | nindent 16 }}
+              args: ["collector"]
+              volumeMounts:
+                - name: {{ $configMapName }}
+                  mountPath: /etc/finala
+              env:
+                {{- include "finala.environmentVars" $collector | nindent 18 }}
+          volumes:
+            - name: {{ $configMapName }}
+              configMap:
+                name: {{ $configMapName }}
+                items:
+                  - key: config
+                    path: config.yaml
+
+{{- end }}
+{{- end }}
